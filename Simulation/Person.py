@@ -6,7 +6,7 @@ random.seed(RANDOM_SEED)
 class Person:
     def __init__(self, id):
         self.id = id
-        self.health_status = 'healthy' if random.random() >= 0.02 else 'infected'
+        self.health_status = 'healthy' if random.random() >= INITIAL_INFECTION else 'infected'
         self.employed = None
         self.work_loc = None
         self.home_loc = None
