@@ -7,7 +7,7 @@ import random
 import pandas as pd
 
 class Simulation:
-    def __init__(self, queue_realtime, queue_dashboard):
+    def __init__(self,queue_dashboard, queue_realtime):
         self.population = []
         self.queue_realtime = queue_realtime
         self.queue_dashboard = queue_dashboard
@@ -32,23 +32,28 @@ class Simulation:
                  for _ in range(np.count_nonzero(infected_to_death))]
         self.position = position
         self.index = np.array(range(INITIAL_POPULATION))
-
+        self.policy_time = datetime.datetime.strptime('03/03/2020 00:00:00', '%d/%m/%Y %H:%M:%S')
+        self.detected_cases = np.zeros(INITIAL_POPULATION, dtype=np.bool)
+        self.weak_confinement = False
+        self.strong_confinement = False
 
     def start(self):
+        counter = 0
         for frame_id in range(N_FRAMES):
             self.population_moves()
             self.population_gets_infected()
             self.population_recovers_dies()
             self.simulation_time += datetime.timedelta(seconds=1 / FPS_SIMULATION)
-            self.send_frame_data()
+            self.send_frame_data(frame_id)
         print('end simulation')
 
 
     def population_gets_infected(self):
-        h = np.transpose(np.expand_dims(self.position[self.healthy_population], axis=0), axes=(1, 0, 2))
+        population_at_risk = self.healthy_population & ~self.immune_population
+        h = np.transpose(np.expand_dims(self.position[population_at_risk], axis=0), axes=(1, 0, 2))
         i = np.expand_dims(self.position[self.infected_population], axis=0)
         a = np.max(np.linalg.norm(h - i, axis=2) < 2 * CRITICAL_RADIUS, axis=1)
-        infected_ids = self.index[self.healthy_population][a]
+        infected_ids = self.index[population_at_risk][a]
         infected_mask = np.zeros(INITIAL_POPULATION, dtype=np.bool)
         infected_mask[infected_ids] = True
         if np.any(infected_mask):
@@ -64,16 +69,17 @@ class Simulation:
                 self.recovery_death_datetime[infected_to_death_mask] = \
                     [self.simulation_time + datetime.timedelta(days=random.gauss(MEAN_TIME_TO_DEATH, SIGMA_TIME_TO_DEATH))
                      for _ in range(np.count_nonzero(infected_to_death_mask))]
-            self.infected_population[(~self.healthy_population & ~self.infected_population)] = True
+            self.detected_cases[infected_mask] = random.choices((True, False), (DETECTION_PROB, 1-DETECTION_PROB), k=np.count_nonzero(infected_mask))
+            self.infected_population[infected_mask] = True
 
     def population_recovers_dies(self):
-        recovered_mask = (self.infected_population) & (self.simulation_time >= self.recovery_death_datetime) & (
-            ~self.dead_if_infected_population)
-        dead_mask = (self.infected_population) & (self.simulation_time >= self.recovery_death_datetime) & (
-            self.dead_if_infected_population)
+        not_infected = (self.infected_population) & (self.simulation_time >= self.recovery_death_datetime)
+        recovered_mask = not_infected & ~self.dead_if_infected_population
+        dead_mask = not_infected & self.dead_if_infected_population
+        self.infected_population[not_infected] = False
+        self.detected_cases[not_infected] = False
         self.infected_population[recovered_mask] = False
         self.healthy_population[recovered_mask] = True
-        self.infected_population[dead_mask] = False
         self.dead_population[dead_mask] = True
         self.immune_population[recovered_mask] = random.choices((True, False), (IMMUNITY_PROB, 1-IMMUNITY_PROB),
                                                                  k=np.count_nonzero(recovered_mask))
@@ -92,17 +98,30 @@ class Simulation:
                np.array(position, dtype=np.int32)
 
     def population_moves(self):
+        total_detected_cases = self.detected_cases.sum()
+        if not self.weak_confinement and not self.strong_confinement and total_detected_cases >= START_WEAK_CONFINEMENT_VALUE:
+            self.weak_confinement = True
+        elif not self.strong_confinement and total_detected_cases >= START_STRONG_CONFINEMENT_VALUE:
+            self.strong_confinement = True
+        elif self.weak_confinement and total_detected_cases <= RELEASE_WEAK_CONFINEMENT_VALUE:
+            self.weak_confinement = False
+        elif self.strong_confinement and total_detected_cases <= RELEASE_STRONG_CONFINEMENT_VALUE:
+            self.strong_confinement = False
+            self.weak_confinement = True
+
         for person in self.population:
-            person.persistent_move()
+            person.persistent_move(self.detected_cases[person.id], self.weak_confinement, self.strong_confinement)
             self.position[person.id] = person.pos
 
-    def send_frame_data(self):
+    def send_frame_data(self, frame_id):
         frame_data = pd.DataFrame({'pos_x': self.position[:, 0],
                                    'pos_y': self.position[:, 1],
                                    'healthy': self.healthy_population,
                                    'infected': self.infected_population,
+                                   'detected': self.detected_cases,
                                    'immune': self.immune_population,
                                    'dead': self.dead_population
                                    })
         self.queue_realtime.put((frame_data, self.simulation_time))
-        self.queue_dashboard.put((frame_data, self.simulation_time))
+        if frame_id % 10 == 0:
+            self.queue_dashboard.put((frame_data, self.simulation_time, self.weak_confinement, self.strong_confinement))

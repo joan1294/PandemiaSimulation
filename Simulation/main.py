@@ -5,7 +5,7 @@ import time
 
 def main():
     q_dashboard = Queue()
-    q_real_time = Queue()
+    q_real_time = Queue(maxsize=3)
     simulation_p = Process(target=start_simulation, args=(q_dashboard, q_real_time))
     simulation_p.start()
     real_time_p = Process(target=start_real_time, args=(q_real_time,))

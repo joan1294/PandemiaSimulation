@@ -17,13 +17,18 @@ INITIAL_POPULATION = int(config['Population']['initial_population'])
 ACTIVE_POPULATION_EMPLOYMENT_PROB = float(config['Population']['active_population_employment_prob'])
 SPEED_MS = float(config['Population']['speed_ms'])
 CRITICAL_RADIUS = int(config['Population']['critical_radius'])
-INITIAL_INFECTION = float(config['Population']['initial_infection'])
+DETECTION_PROB = float(config['Population']['detection_prob'])
 MEAN_TIME_TO_RECOVER = float(config['Population']['mean_time_to_recover'])
 SIGMA_TIME_TO_RECOVER = float(config['Population']['sigma_time_to_recover'])
 IMMUNITY_PROB = float(config['Population']['sigma_time_to_recover'])
 DEATH_PROB = float(config['Population']['death_prob'])
 MEAN_TIME_TO_DEATH = float(config['Population']['mean_time_to_death'])
 SIGMA_TIME_TO_DEATH = float(config['Population']['sigma_time_to_death'])
+
+START_WEAK_CONFINEMENT_VALUE = float(config['Policy']['start_weak_confinement_value'])
+START_STRONG_CONFINEMENT_VALUE = float(config['Policy']['start_strong_confinement_value'])
+RELEASE_WEAK_CONFINEMENT_VALUE = float(config['Policy']['release_weak_confinement_value'])
+RELEASE_STRONG_CONFINEMENT_VALUE = float(config['Policy']['release_strong_confinement_value'])
 
 AGE_PYRAMID_WEIGHTS = [float(config['Age pyramid']['prob_0_9']),
                        float(config['Age pyramid']['prob_10_19']),

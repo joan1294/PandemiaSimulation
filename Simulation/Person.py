@@ -6,7 +6,7 @@ random.seed(RANDOM_SEED)
 class Person:
     def __init__(self, id):
         self.id = id
-        self.health_status = 'healthy' if random.random() >= INITIAL_INFECTION else 'infected'
+        self.health_status = 'healthy' if id != 1 else 'infected'
         self.employed = None
         self.work_loc = None
         self.home_loc = None
@@ -23,17 +23,23 @@ class Person:
         self.employed = True if random.random() < ACTIVE_POPULATION_EMPLOYMENT_PROB else False
         self.pos = [random.randint(5, RESOLUTION[0]-5), random.randint(5, RESOLUTION[1]-5)]
 
-    def persistent_move(self):
-        new_pos = [-1, -1]
-        while new_pos[0] < 0 or new_pos[0] > RESOLUTION[0] or new_pos[1] < 0 or new_pos[1] > RESOLUTION[1]:
-            # Calculate angle of the movement vector
-            self.angle += random.uniform(-0.5, 0.5) + random.choices([0,2*math.pi], [80, 20])[0]
-            # Calculate movement coordinates
-            x_move = int(math.cos(self.angle) * DISTANCE_PER_FRAME)
-            y_move = int(math.sin(self.angle) * DISTANCE_PER_FRAME)
-            new_pos[0] = self.pos[0] + x_move
-            new_pos[1] = self.pos[1] + y_move
-        self.pos = new_pos
+    def persistent_move(self, infected_detected, weak_confinement, strong_confinement):
+        movement_factor = 1
+        if strong_confinement:
+            movement_factor = 0.15
+        elif weak_confinement:
+            movement_factor = 0.6
+        if not infected_detected:
+            new_pos = [-1, -1]
+            while new_pos[0] < 0 or new_pos[0] > RESOLUTION[0] or new_pos[1] < 0 or new_pos[1] > RESOLUTION[1]:
+                # Calculate angle of the movement vector
+                self.angle += random.uniform(-0.5, 0.5) + random.choices([0,2*math.pi], [80, 20])[0]
+                # Calculate movement coordinates
+                x_move = int(math.cos(self.angle) * DISTANCE_PER_FRAME*movement_factor)
+                y_move = int(math.sin(self.angle) * DISTANCE_PER_FRAME*movement_factor)
+                new_pos[0] = self.pos[0] + x_move
+                new_pos[1] = self.pos[1] + y_move
+            self.pos = new_pos
 
     def random_move(self):
         new_pos = [-1, -1]
