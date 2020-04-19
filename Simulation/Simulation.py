@@ -122,6 +122,6 @@ class Simulation:
                                    'immune': self.immune_population,
                                    'dead': self.dead_population
                                    })
-        self.queue_realtime.put((frame_data, self.simulation_time))
+        # self.queue_realtime.put((frame_data, self.simulation_time))
         if frame_id % 10 == 0:
             self.queue_dashboard.put((frame_data, self.simulation_time, self.weak_confinement, self.strong_confinement))

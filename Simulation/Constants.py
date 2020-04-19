@@ -4,6 +4,8 @@ from datetime import datetime
 config = configparser.ConfigParser()
 config.read('../Config/Constants.cfg')
 
+SHOW_POPULATION_MOVEMENTS = True if config['General']['show_population_movements'].lower() == 'true' else False
+LIVE = True if config['General']['live'].lower() == 'true' else False
 RANDOM_SEED = int(config['General']['random_seed'])
 SIMULATION_DURATION_DAYS = int(config['General']['simulation_duration_days'])
 FPS_SIMULATION = float(config['General']['fps_simulation'])
